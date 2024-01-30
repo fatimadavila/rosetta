@@ -18,6 +18,12 @@
 #include <core/scoring/ScoreFunction.hh>
 #include <numeric/random/random.hh>
 #include <protocols/moves/MonteCarlo.hh>
+#include <core/pack/task/TaskFactory.hh>
+#include <core/pack/task/PackerTask.hh>
+#include <core/pack/pack_rotamers.hh>
+#include <core/kinematics/MoveMap.hh>
+#include <core/optimization/MinimizerOptions.hh>
+#include <core/optimization/AtomTreeMinimizer.hh>
 
 int 
 main( int argc, char ** argv ) {
@@ -34,6 +40,12 @@ main( int argc, char ** argv ) {
         core::Real temp = 1.0;
         protocols::moves::MonteCarloOP monte_carlo(new protocols::moves::MonteCarlo(*mypose, *sfxn, temp));
 
+        core::kinematics::MoveMap mm;
+        mm.set_bb( true );
+        mm.set_chi( true );
+        core::optimization::MinimizerOptions min_opts( "lbfgs_armijo_atol", 0.01, true );
+        core::optimization::AtomTreeMinimizer atm;
+
         for (int i = 0; i < 10; i++){
             double uniform_random_number = numeric::random::uniform();
             int N = mypose->size();
@@ -44,6 +56,10 @@ main( int argc, char ** argv ) {
             core::Real orig_psi = mypose->psi( randres );
             mypose->set_phi( randres, orig_phi + pert1 );
             mypose->set_psi( randres, orig_psi + pert2 );
+            core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( *mypose );
+            repack_task->restrict_to_repacking();
+            core::pack::pack_rotamers( *mypose, *sfxn, repack_task );
+            atm.run( *mypose, mm, *sfxn, min_opts );
             monte_carlo->boltzmann( *mypose );
             core::Real score = sfxn->score( *mypose );
             std::cout << "The score of your pose is: " << score << std::endl;
