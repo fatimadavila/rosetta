@@ -46,7 +46,10 @@ main( int argc, char ** argv ) {
         core::optimization::MinimizerOptions min_opts( "lbfgs_armijo_atol", 0.01, true );
         core::optimization::AtomTreeMinimizer atm;
 
-        for (int i = 0; i < 10; i++){
+        // Speed up by copying pose outside of the loop
+        core::pose::Pose copy_pose;
+
+        for (int i = 0; i < 100; i++){
             double uniform_random_number = numeric::random::uniform();
             int N = mypose->size();
             core::Size randres = static_cast< core::Size > ( uniform_random_number * N + 1 );
@@ -59,7 +62,9 @@ main( int argc, char ** argv ) {
             core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( *mypose );
             repack_task->restrict_to_repacking();
             core::pack::pack_rotamers( *mypose, *sfxn, repack_task );
-            atm.run( *mypose, mm, *sfxn, min_opts );
+            copy_pose = *mypose; // Copying pose to speed code up
+            atm.run( copy_pose, mm, *sfxn, min_opts );
+            *mypose = copy_pose;
             monte_carlo->boltzmann( *mypose );
             core::Real score = sfxn->score( *mypose );
             std::cout << "The score of your pose is: " << score << std::endl;
