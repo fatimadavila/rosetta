@@ -16,6 +16,8 @@
 #include <core/pose/Pose.hh>
 #include <core/scoring/ScoreFunctionFactory.hh>
 #include <core/scoring/ScoreFunction.hh>
+#include <numeric/random/random.hh>
+#include <protocols/moves/MonteCarlo.hh>
 
 int 
 main( int argc, char ** argv ) {
@@ -28,8 +30,26 @@ main( int argc, char ** argv ) {
         std::cout << "You entered: " << filenames[ 1 ] << " as the PDB file to be read" << std::endl;
         core::pose::PoseOP mypose = core::import_pose::pose_from_file( filenames[1] );
         core::scoring::ScoreFunctionOP sfxn = core::scoring::get_score_function();
-        core::Real score = sfxn->score( *mypose );
-        std::cout << "The score of your pose is: " << score << std::endl;
+
+        core::Real temp = 1.0;
+        protocols::moves::MonteCarloOP monte_carlo(new protocols::moves::MonteCarlo(*mypose, *sfxn, temp));
+
+        for (int i = 0; i < 10; i++){
+            double uniform_random_number = numeric::random::uniform();
+            int N = mypose->size();
+            core::Size randres = static_cast< core::Size > ( uniform_random_number * N + 1 );
+            core::Real pert1 = numeric::random::gaussian();
+            core::Real pert2 = numeric::random::gaussian();
+            core::Real orig_phi = mypose->phi( randres );
+            core::Real orig_psi = mypose->psi( randres );
+            mypose->set_phi( randres, orig_phi + pert1 );
+            mypose->set_psi( randres, orig_psi + pert2 );
+            monte_carlo->boltzmann( *mypose );
+            core::Real score = sfxn->score( *mypose );
+            std::cout << "The score of your pose is: " << score << std::endl;
+        }
+
+
     } 
     else {
         std::cout << "You didn’t provide a PDB file with the -in::file::s option" << std::endl;
