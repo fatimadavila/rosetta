@@ -24,6 +24,7 @@
 #include <core/kinematics/MoveMap.hh>
 #include <core/optimization/MinimizerOptions.hh>
 #include <core/optimization/AtomTreeMinimizer.hh>
+#include <protocols/moves/PyMOLMover.hh>
 
 int 
 main( int argc, char ** argv ) {
@@ -49,7 +50,17 @@ main( int argc, char ** argv ) {
         // Speed up by copying pose outside of the loop
         core::pose::Pose copy_pose;
 
-        for (int i = 0; i < 100; i++){
+        // Call the PyMol observer
+        protocols::moves::PyMOLObserverOP the_observer = protocols::moves::AddPyMOLObserver( *mypose, true, 0);
+        the_observer->pymol().apply( *mypose );
+
+        int counter_accepted = 0;
+        int number_of_iterations = 10;
+
+        for (int i = 0; i < number_of_iterations; i++){
+
+            std::cout << "Iteration number: " << i << std::endl;
+
             double uniform_random_number = numeric::random::uniform();
             int N = mypose->size();
             core::Size randres = static_cast< core::Size > ( uniform_random_number * N + 1 );
@@ -65,11 +76,20 @@ main( int argc, char ** argv ) {
             copy_pose = *mypose; // Copying pose to speed code up
             atm.run( copy_pose, mm, *sfxn, min_opts );
             *mypose = copy_pose;
-            monte_carlo->boltzmann( *mypose );
-            core::Real score = sfxn->score( *mypose );
-            std::cout << "The score of your pose is: " << score << std::endl;
+            if (monte_carlo->boltzmann( *mypose ) == true){
+                std::cout << "Move accepted!\n";
+                counter_accepted++;
+            }
+
+            // core::Real score = sfxn->score( *mypose );
+            // std::cout << "The score of your pose is: " << score << std::endl;
+        
         }
 
+    std::cout << "Number of accepted : " << counter_accepted << std::endl;
+    std::cout << "Number of iterations : " << number_of_iterations << std::endl;
+    double acceptance_rate = (counter_accepted / number_of_iterations);
+    std::cout << "This is the acceptance rate: " << acceptance_rate << std::endl;
 
     } 
     else {
