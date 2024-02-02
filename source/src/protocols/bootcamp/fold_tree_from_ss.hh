@@ -52,5 +52,10 @@ fold_tree_from_dssp_string(
     std::string input_dssp
 );
 
+utility::vector1< std::pair< core::Size, core::Size > > 
+identify_gaps_spans(
+    utility::vector1< std::pair< core::Size, core::Size > > ss_spans,core::Size last_residue
+);
+
 }
 }

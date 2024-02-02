@@ -25,6 +25,11 @@
 #include <core/optimization/MinimizerOptions.hh>
 #include <core/optimization/AtomTreeMinimizer.hh>
 #include <protocols/moves/PyMOLMover.hh>
+#include <protocols/bootcamp/fold_tree_from_ss.hh>
+#include <core/scoring/ScoreType.hh>
+#include <core/pose/variant_util.hh>
+#include <core/scoring/dssp/Dssp.hh>
+#include <core/kinematics/FoldTree.hh>
 
 int 
 main( int argc, char ** argv ) {
@@ -34,9 +39,23 @@ main( int argc, char ** argv ) {
     devel::init( argc, argv );
     utility::vector1< std::string > filenames = basic::options::option[ basic::options::OptionKeys::in::file::s ].value();
     if ( filenames.size() > 0 ) {
+
+        // Standard pose input
         std::cout << "You entered: " << filenames[ 1 ] << " as the PDB file to be read" << std::endl;
         core::pose::PoseOP mypose = core::import_pose::pose_from_file( filenames[1] );
+
+        // Add FoldTree joining midpoints of SS elements
+        core::scoring::dssp::Dssp dssp = core::scoring::dssp::Dssp( *mypose );
+        core::kinematics::FoldTree ft = protocols::bootcamp::fold_tree_from_dssp_string( dssp.get_dssp_secstruct() );
+        std::cout << " THE DSSP STRING LOOKS LIKE THIS \n" << dssp.get_dssp_secstruct() << std::endl;
+        mypose->fold_tree( ft );
+        std::cout << " THE FOLD TREE LOOKS LIKE THIS \n " << ft << std::endl;
+        core::pose::correctly_add_cutpoint_variants( *mypose ); // Correct for cutpoints
+        std::cout << "\n\n\n ADDED THE CUTPOINTS \n\n\n" << std::endl;
+
+        // Setting scorefunction
         core::scoring::ScoreFunctionOP sfxn = core::scoring::get_score_function();
+        sfxn->set_weight(core::scoring::ScoreType::linear_chainbreak, 1); // adjusting for foldtree chain breaks
 
         core::Real temp = 1.0;
         protocols::moves::MonteCarloOP monte_carlo(new protocols::moves::MonteCarlo(*mypose, *sfxn, temp));
@@ -55,7 +74,7 @@ main( int argc, char ** argv ) {
         the_observer->pymol().apply( *mypose );
 
         int counter_accepted = 0;
-        int number_of_iterations = 10;
+        int number_of_iterations = 1;
 
         for (int i = 0; i < number_of_iterations; i++){
 
@@ -88,7 +107,7 @@ main( int argc, char ** argv ) {
 
     std::cout << "Number of accepted : " << counter_accepted << std::endl;
     std::cout << "Number of iterations : " << number_of_iterations << std::endl;
-    double acceptance_rate = (counter_accepted / number_of_iterations);
+    double acceptance_rate = (double(counter_accepted) / double(number_of_iterations));
     std::cout << "This is the acceptance rate: " << acceptance_rate << std::endl;
 
     } 

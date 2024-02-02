@@ -103,9 +103,17 @@ public:
 		}
 	}
 
-	void test_fold_tree_from_dssp_string(){
-		std::cout << "\n\n\nDSSP TEST\n\n\n";
+	void test_4(){
+		std::cout << "\n\n\nDSSP TEST 1\n\n\n";
 		std::string test_string = "   EEEEEEE    EEEEEEE         EEEEEEEEE    EEEEEEEEEE   HHHHHH         EEEEEEEEE         EEEEE     ";
+		core::kinematics::FoldTree test_ft = protocols::bootcamp::fold_tree_from_dssp_string(test_string);
+		std::cout << test_ft << std::endl;
+		TS_ASSERT( test_ft.check_fold_tree() );
+	}
+
+	void test_5(){
+		std::cout << "\n\n\nDSSP TEST 2\n\n\n";
+		std::string test_string = "LEEEEEELLLLEEEEELLLLLEHHHHHHHHHHHHLLLHHHEEEEELLEELLLLLELHHHLLLLLLEEEEEELLLLL";
 		core::kinematics::FoldTree test_ft = protocols::bootcamp::fold_tree_from_dssp_string(test_string);
 		std::cout << test_ft << std::endl;
 		TS_ASSERT( test_ft.check_fold_tree() );
